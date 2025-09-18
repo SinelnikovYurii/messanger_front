@@ -1,10 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import { initApp } from './app.js';
+import { showNotification } from './notification.js';
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Инициализация приложения
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        initApp();
+    } catch (error) {
+        console.error('Failed to initialize app:', error);
+        showNotification('Не удалось загрузить приложение', 'error');
+    }
+});
+
+// Глобальная обработка ошибок
+window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+    showNotification('Произошла непредвиденная ошибка', 'error');
+});

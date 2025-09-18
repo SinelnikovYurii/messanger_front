@@ -1,116 +1,70 @@
-import { io } from 'socket.io-client';
+let socket = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
-class WebSocketService {
-    constructor() {
-        this.socket = null;
-        this.listeners = new Map();
+export function initWebSocket(onMessage) {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+        console.error('No token available for WebSocket connection');
+        return;
     }
 
-    connect(token) {
-        if (this.socket?.connected) {
-            return;
-        }
+    try {
+        socket = new WebSocket(`ws://localhost:8080?token=${token}`);
 
-        this.socket = io('http://localhost:8082', { // WebSocket сервер
-            auth: { token },
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-        });
-
-        this.setupEventListeners();
-    }
-
-    setupEventListeners() {
-        this.socket.on('connect', () => {
+        socket.onopen = () => {
             console.log('WebSocket connected');
-        });
+            reconnectAttempts = 0;
+        };
 
-        this.socket.on('disconnect', () => {
-            console.log('WebSocket disconnected');
-        });
-
-        this.socket.on('message', (data) => {
-            this.emit('message', data);
-        });
-
-        this.socket.on('messageStatus', (data) => {
-            this.emit('messageStatus', data);
-        });
-
-        this.socket.on('typing', (data) => {
-            this.emit('typing', data);
-        });
-
-        this.socket.on('error', (error) => {
-            console.error('WebSocket error:', error);
-            this.emit('error', error);
-        });
-    }
-
-    disconnect() {
-        if (this.socket) {
-            this.socket.disconnect();
-            this.socket = null;
-        }
-    }
-
-    sendMessage(chatId, content) {
-        if (this.socket) {
-            this.socket.emit('sendMessage', {
-                chatId,
-                content,
-                timestamp: new Date().toISOString()
-            });
-        }
-    }
-
-    joinChat(chatId) {
-        if (this.socket) {
-            this.socket.emit('joinChat', { chatId });
-        }
-    }
-
-    leaveChat(chatId) {
-        if (this.socket) {
-            this.socket.emit('leaveChat', { chatId });
-        }
-    }
-
-    typing(chatId) {
-        if (this.socket) {
-            this.socket.emit('typing', { chatId });
-        }
-    }
-
-    // Event emitter methods
-    on(event, callback) {
-        if (!this.listeners.has(event)) {
-            this.listeners.set(event, []);
-        }
-        this.listeners.get(event).push(callback);
-    }
-
-    off(event, callback) {
-        if (this.listeners.has(event)) {
-            const listeners = this.listeners.get(event);
-            const index = listeners.indexOf(callback);
-            if (index > -1) {
-                listeners.splice(index, 1);
+        socket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                onMessage(message);
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
             }
-        }
-    }
+        };
 
-    emit(event, data) {
-        if (this.listeners.has(event)) {
-            this.listeners.get(event).forEach(callback => callback(data));
-        }
-    }
+        socket.onclose = () => {
+            console.log('WebSocket disconnected');
+            attemptReconnect(onMessage);
+        };
 
-    isConnected() {
-        return this.socket?.connected || false;
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+    } catch (error) {
+        console.error('WebSocket connection failed:', error);
     }
 }
 
-export default new WebSocketService();
+function attemptReconnect(onMessage) {
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        const delay = Math.min(1000 * reconnectAttempts, 5000);
+
+        console.log(`Attempting to reconnect in ${delay}ms...`);
+
+        setTimeout(() => {
+            initWebSocket(onMessage);
+        }, delay);
+    }
+}
+
+export function sendWebSocketMessage(message) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+        return true;
+    }
+    return false;
+}
+
+export function closeWebSocket() {
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+}
