@@ -1,0 +1,30 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    padding: var(--spacing-md);
+}
+
+.login-container {
+    width: 100%;
+    max-width: 450px;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: var(--spacing-lg);
+    color: var(--white);
+}
+
+.login-footer a {
+    color: var(--white);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition-fast);
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}

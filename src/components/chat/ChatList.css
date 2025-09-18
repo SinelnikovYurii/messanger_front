@@ -1,0 +1,61 @@
+.chat-list {
+    height: 100%;
+    overflow-y: auto;
+    background-color: var(--white);
+    border-right: 1px solid var(--gray-200);
+}
+
+.chat-list h3 {
+    padding: var(--spacing-md);
+    margin: 0;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: var(--font-size-lg);
+    color: var(--gray-800);
+}
+
+.chat-item {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--gray-100);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.chat-item:hover {
+    background-color: var(--gray-50);
+}
+
+.chat-item.active {
+    background-color: var(--primary-light);
+    border-left: 3px solid var(--primary-color);
+}
+
+.chat-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-item-name {
+    font-weight: 500;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-item-preview {
+    font-size: var(--font-size-sm);
+    color: var(--gray-600);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-item-time {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+    margin-left: var(--spacing-sm);
+    flex-shrink: 0;
+}
