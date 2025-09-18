@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { useAuth } from '../hooks/useAuth.jsx';
-import './ProfilePage.css';
+import './css/ProfilePage.css';
 
 const ProfilePage = () => {
     const { user, updateProfile } = useAuth();

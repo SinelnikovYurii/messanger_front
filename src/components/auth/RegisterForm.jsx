@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Input from '../common/Input';
 import Button from '../common/Button';
-import './RegisterForm.css';
+import './css/RegisterForm.css';
 
 const RegisterForm = ({ onRegister, loading, error }) => {
     const [userData, setUserData] = useState({

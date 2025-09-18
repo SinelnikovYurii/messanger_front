@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Input from '../common/Input';
 import Button from '../common/Button';
-import './LoginForm.css';
+import './css/LoginForm.css';
 
 const LoginForm = ({ onLogin, loading, error }) => {
     const [credentials, setCredentials] = useState({

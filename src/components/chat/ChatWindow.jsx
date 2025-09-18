@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Message from './Message';
-import './ChatWindow.css';
+import './css/ChatWindow.css';
 
 const ChatWindow = ({ chat, messages, onSendMessage, currentUser }) => {
     const [newMessage, setNewMessage] = useState('');

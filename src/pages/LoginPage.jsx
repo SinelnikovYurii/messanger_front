@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import LoginForm from '../components/auth/LoginForm';
 import { useAuth } from '../hooks/useAuth.jsx';
-import './LoginPage.css';
+import './css/LoginPage.css';
 
 const LoginPage = () => {
     const { login, loading, error } = useAuth();

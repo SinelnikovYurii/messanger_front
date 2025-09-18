@@ -4,7 +4,7 @@ import ChatList from '../components/chat/ChatList';
 import ChatWindow from '../components/chat/ChatWindow';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useChat } from '../hooks/useChat';
-import './ChatPage.css';
+import './css/ChatPage.css';
 
 const ChatPage = () => {
     const { user, logout } = useAuth();

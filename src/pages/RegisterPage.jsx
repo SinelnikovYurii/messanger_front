@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import RegisterForm from '../components/auth/RegisterForm';
 import { useAuth } from '../hooks/useAuth';
-import './RegisterPage.css';
+import './css/RegisterPage.css';
 
 const RegisterPage = () => {
     const { register, loading, error } = useAuth();

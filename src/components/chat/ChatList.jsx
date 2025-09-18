@@ -1,5 +1,5 @@
 import React from 'react';
-import './ChatList.css';
+import './css/ChatList.css';
 
 const ChatList = ({ chats, onSelectChat, selectedChatId }) => {
     return (
