@@ -68,10 +68,12 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.token = action.payload.token;
                 state.isAuthenticated = true;
+                // Не вызываем getCurrentUser автоматически - пользователь уже залогинен
             })
             .addCase(login.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
+                state.isAuthenticated = false;
             })
             // Register
             .addCase(register.pending, (state) => {
@@ -80,7 +82,7 @@ const authSlice = createSlice({
             })
             .addCase(register.fulfilled, (state) => {
                 state.loading = false;
-                // Не устанавливаем isAuthenticated = true после регистрации
+                // ВАЖНО: Не устанавливаем isAuthenticated = true после регистрации
                 // Пользователь должен сначала залогиниться
             })
             .addCase(register.rejected, (state, action) => {
@@ -95,6 +97,7 @@ const authSlice = createSlice({
             .addCase(getCurrentUser.rejected, (state) => {
                 state.isAuthenticated = false;
                 state.user = null;
+                state.token = null;
             });
     }
 });
