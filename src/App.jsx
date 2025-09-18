@@ -1,52 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './components/Login/Login';
-import Register from './components/Register/Register';
-import Chat from './components/Chat/Chat';
-import './App.css';
+import { useDispatch, useSelector } from 'react-redux';
+import { getCurrentUser } from './store/slices/authSlice';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ChatPage from './pages/ChatPage';
+
+
 
 function App() {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const dispatch = useDispatch();
+    const { isAuthenticated, token } = useSelector(state => state.auth);
+
+
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
         if (token) {
-            setIsAuthenticated(true);
+            dispatch(getCurrentUser());
         }
-    }, []);
+    }, [token, dispatch]);
 
-    const handleLogin = (token) => {
-        localStorage.setItem('token', token);
-        setIsAuthenticated(true);
+    const ProtectedRoute = ({ children }) => {
+        return isAuthenticated ? children : <Navigate to="/login" />;
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        setIsAuthenticated(false);
+    const AuthRoute = ({ children }) => {
+        return !isAuthenticated ? children : <Navigate to="/chat" />;
     };
 
     return (
         <Router>
-            <div className="App">
-                <Routes>
-                    <Route
-                        path="/login"
-                        element={<Login onLogin={handleLogin} />}
-                    />
-                    <Route
-                        path="/register"
-                        element={<Register />}
-                    />
-                    <Route
-                        path="/chat"
-                        element={isAuthenticated ? <Chat onLogout={handleLogout} /> : <Navigate to="/login" />}
-                    />
-                    <Route
-                        path="/"
-                        element={<Navigate to={isAuthenticated ? "/chat" : "/login"} />}
-                    />
-                </Routes>
-            </div>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+
+                <Route
+                    path="/login"
+                    element={
+                        <AuthRoute>
+                            <LoginPage />
+                        </AuthRoute>
+                    }
+                />
+                <Route
+                    path="/register"
+                    element={
+                        <AuthRoute>
+                            <RegisterPage />
+                        </AuthRoute>
+                    }
+                />
+                <Route
+                    path="/chat"
+                    element={
+                        <ProtectedRoute>
+                            <ChatPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
         </Router>
     );
 }

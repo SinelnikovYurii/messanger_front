@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Input from '../components/common/Input';
-import Button from '../components/common/Button';
+import Input from '../components/Input';
+import Button from '../components/Button';
 import { useAuth } from '../hooks/useAuth.jsx';
 import './css/ProfilePage.css';
 

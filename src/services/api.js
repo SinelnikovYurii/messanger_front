@@ -1,59 +1,36 @@
-const API_URL = 'http://localhost:3000';
+import axios from 'axios';
 
-export const api = {
-    async request(endpoint, options = {}) {
-        const url = `${API_URL}${endpoint}`;
-        const token = localStorage.getItem('token');
+const AUTH_SERVER_URL = 'http://localhost:8081'; // Authorization Server
+const API_GATEWAY_URL = 'http://localhost:8080'; // API Gateway
+const CHAT_SERVER_URL = 'http://localhost:8091'; // Chat Server
 
-        const headers = {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        };
+// Auth API - теперь указывает на Authorization Server
+export const authApi = axios.create({
+    baseURL: `${AUTH_SERVER_URL}/auth`,
+    withCredentials: true,
+});
 
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
+// User API - указывает на API Gateway
+export const userApi = axios.create({
+    baseURL: `${API_GATEWAY_URL}/api/users`,
+    withCredentials: true,
+});
 
-        try {
-            const response = await fetch(url, {
-                ...options,
-                headers,
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
-            }
-
-            return data;
-        } catch (error) {
-            throw new Error(error.message || 'Network error');
-        }
-    },
-
-    async login(username, password) {
-        return this.request('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-        });
-    },
-
-    async register(username, password) {
-        return this.request('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-        });
-    },
-
-    async getMessages() {
-        return this.request('/messages');
-    },
-
-    async sendMessage(content) {
-        return this.request('/messages', {
-            method: 'POST',
-            body: JSON.stringify({ content }),
-        });
+// Настройка интерцепторов для автоматической установки токенов
+authApi.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
-};
+    return config;
+});
+
+userApi.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+export { AUTH_SERVER_URL, API_GATEWAY_URL, CHAT_SERVER_URL };
