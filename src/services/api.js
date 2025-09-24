@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const AUTH_SERVER_URL = 'http://localhost:8081'; // Authorization Server - ПОРТ 8081
 const API_GATEWAY_URL = 'http://localhost:8080'; // API Gateway - ПОРТ 8080
-const CHAT_SERVER_URL = 'http://localhost:8091'; // Chat Server - ПОРТ 8091
+const CHAT_SERVER_URL = 'ws://localhost:8092/ws'; // Chat Server - ПОРТ 8091
 
 // Auth API - теперь указывает на Authorization Server (8081)
 export const authApi = axios.create({

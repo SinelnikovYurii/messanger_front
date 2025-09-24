@@ -1,8 +1,10 @@
 import { CHAT_SERVER_URL } from './api';
+import { Client } from '@stomp/stompjs';
 
 class ChatService {
     constructor() {
-        this.socket = null;
+        this.stompClient = null;
+        this.token = null;
         this.listeners = {
             onMessage: [],
             onConnect: [],
@@ -14,32 +16,41 @@ class ChatService {
     connect(token) {
         return new Promise((resolve, reject) => {
             try {
-                // Используем правильный порт 8091 для WebSocket
-                this.socket = new WebSocket(`${CHAT_SERVER_URL.replace('http', 'ws')}/chat?token=${token}`);
+                this.stompClient = new Client({
+                    brokerURL: `${CHAT_SERVER_URL.replace('http', 'ws')}/ws/chat`,
+                    connectHeaders: {
+                        token: token
+                    },
+                    onConnect: () => {
+                        this.listeners.onConnect.forEach(callback => callback());
+                        resolve();
 
-                this.socket.onopen = () => {
-                    this.listeners.onConnect.forEach(callback => callback());
-                    resolve();
-                };
-
-                this.socket.onmessage = (event) => {
-                    try {
-                        const message = JSON.parse(event.data);
-                        this.listeners.onMessage.forEach(callback => callback(message));
-                    } catch (error) {
-                        console.error('Error parsing message:', error);
+                        // Подписка на сообщения
+                        this.stompClient.subscribe('/topic/messages', (message) => {
+                            try {
+                                const parsedMessage = JSON.parse(message.body);
+                                this.listeners.onMessage.forEach(callback => callback(parsedMessage));
+                            } catch (error) {
+                                console.error('Error parsing message:', error);
+                            }
+                        });
+                    },
+                    onStompError: (frame) => {
+                        console.error('Broker reported error: ' + frame.headers['message']);
+                        this.listeners.onError.forEach(callback => callback(frame));
+                        reject(frame);
+                    },
+                    onWebSocketError: (error) => {
+                        console.error('WebSocket error:', error);
+                        this.listeners.onError.forEach(callback => callback(error));
+                        reject(error);
+                    },
+                    onDisconnect: () => {
+                        this.listeners.onDisconnect.forEach(callback => callback());
                     }
-                };
+                });
 
-                this.socket.onclose = () => {
-                    this.listeners.onDisconnect.forEach(callback => callback());
-                };
-
-                this.socket.onerror = (error) => {
-                    this.listeners.onError.forEach(callback => callback(error));
-                    reject(error);
-                };
-
+                this.stompClient.activate();
             } catch (error) {
                 reject(error);
             }
@@ -47,15 +58,17 @@ class ChatService {
     }
 
     disconnect() {
-        if (this.socket) {
-            this.socket.close();
-            this.socket = null;
+        if (this.stompClient) {
+            this.stompClient.deactivate();
         }
     }
 
     sendMessage(message) {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(message));
+        if (this.stompClient && this.stompClient.connected) {
+            this.stompClient.publish({
+                destination: '/app/chat',
+                body: JSON.stringify(message)
+            });
         }
     }
 
