@@ -68,7 +68,6 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.token = action.payload.token;
                 state.isAuthenticated = true;
-                // Не вызываем getCurrentUser автоматически - пользователь уже залогинен
             })
             .addCase(login.rejected, (state, action) => {
                 state.loading = false;
@@ -82,8 +81,8 @@ const authSlice = createSlice({
             })
             .addCase(register.fulfilled, (state) => {
                 state.loading = false;
-                // ВАЖНО: Не устанавливаем isAuthenticated = true после регистрации
-                // Пользователь должен сначала залогиниться
+                // После регистрации пользователь не аутентифицирован
+                // Он должен сначала залогиниться
             })
             .addCase(register.rejected, (state, action) => {
                 state.loading = false;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { login, getCurrentUser, clearError } from '../store/slices/authSlice';
+import { login, clearError } from '../store/slices/authSlice';
 import { useNavigate, Link } from 'react-router-dom';
 
 const LoginForm = () => {
@@ -25,13 +25,7 @@ const LoginForm = () => {
         e.preventDefault();
         dispatch(clearError());
         try {
-            // Сначала логинимся
             await dispatch(login(credentials)).unwrap();
-
-            // Затем получаем информацию о пользователе
-            await dispatch(getCurrentUser()).unwrap();
-
-            // После этого перенаправляем в чат
             navigate('/chat');
         } catch (error) {
             console.error('Login error:', error);
