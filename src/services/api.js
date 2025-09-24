@@ -6,9 +6,12 @@ const CHAT_SERVER_URL = 'http://localhost:8091'; // Chat Server - ПОРТ 8091
 
 // Auth API - теперь указывает на Authorization Server (8081)
 export const authApi = axios.create({
-    baseURL: `${AUTH_SERVER_URL}/auth`,
+    baseURL: `${AUTH_SERVER_URL}`,
     withCredentials: true,
 });
+
+export const login = (credentials) => authApi.post('/auth/login', credentials);
+export const register = (credentials) => authApi.post('/auth/register', credentials);
 
 // User API - указывает на API Gateway (8080)
 export const userApi = axios.create({

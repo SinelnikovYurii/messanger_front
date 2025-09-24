@@ -1,132 +1,127 @@
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { register, clearError } from '../store/slices/authSlice';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { authApi } from '../services/api';
+import { setToken } from '../utils/auth';
 
-const RegisterForm = () => {
-    const [userData, setUserData] = useState({
+const RegisterForm = ({ setIsAuthenticated }) => {
+    const [credentials, setCredentials] = useState({
         username: '',
         email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
     });
+    const [error, setError] = useState('');
 
-    const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { loading, error } = useSelector(state => state.auth);
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setUserData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        dispatch(clearError());
 
-        if (userData.password !== userData.confirmPassword) {
-            alert('Passwords do not match');
+        if (credentials.password !== credentials.confirmPassword) {
+            setError('Passwords do not match');
             return;
         }
 
         try {
-            await dispatch(register({
-                username: userData.username,
-                email: userData.email,
-                password: userData.password
-            })).unwrap();
-
-            // После успешной регистрации перенаправляем на страницу логина
-            navigate('/login');
-        } catch (error) {
-            console.error('Registration error:', error);
+            const { confirmPassword, ...data } = credentials;
+            const response = await authApi.post('/auth/register', data);
+            if (response.status === 200) {
+                setToken(response.data.token);
+                setIsAuthenticated(true);
+                navigate('/login');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Registration failed');
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Create your account
-                    </h2>
-                </div>
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                            {error}
-                        </div>
-                    )}
-                    <div className="rounded-md shadow-sm -space-y-px">
-                        <div>
-                            <input
-                                name="username"
-                                type="text"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Username"
-                                value={userData.username}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div>
-                            <input
-                                name="email"
-                                type="email"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Email address"
-                                value={userData.email}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div>
-                            <input
-                                name="password"
-                                type="password"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Password"
-                                value={userData.password}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div>
-                            <input
-                                name="confirmPassword"
-                                type="password"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Confirm Password"
-                                value={userData.confirmPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                        >
-                            {loading ? 'Creating account...' : 'Create account'}
-                        </button>
-                    </div>
-
-                    <div className="text-center mt-4">
-                        <p className="text-gray-600">
-                            Already have an account?{' '}
-                            <Link to="/login" className="text-indigo-600 hover:text-indigo-500">
-                                Sign in here
-                            </Link>
-                        </p>
-                    </div>
-                </form>
-            </div>
+        <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto' }}>
+            <h2>Register</h2>
+            <form onSubmit={handleSubmit}>
+                <input
+                    type="text"
+                    placeholder="Username"
+                    value={credentials.username}
+                    onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        margin: '8px 0',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        outline: 'none',
+                    }}
+                    onFocus={(e) => e.target.style.border = '2px solid #007bff'}
+                    onBlur={(e) => e.target.style.border = '1px solid #ccc'}
+                />
+                <input
+                    type="email"
+                    placeholder="Email"
+                    value={credentials.email}
+                    onChange={(e) => setCredentials({...credentials, email: e.target.value})}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        margin: '8px 0',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        outline: 'none',
+                    }}
+                    onFocus={(e) => e.target.style.border = '2px solid #007bff'}
+                    onBlur={(e) => e.target.style.border = '1px solid #ccc'}
+                />
+                <input
+                    type="password"
+                    placeholder="Password"
+                    value={credentials.password}
+                    onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        margin: '8px 0',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        outline: 'none',
+                    }}
+                    onFocus={(e) => e.target.style.border = '2px solid #007bff'}
+                    onBlur={(e) => e.target.style.border = '1px solid #ccc'}
+                />
+                <input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={credentials.confirmPassword}
+                    onChange={(e) => setCredentials({...credentials, confirmPassword: e.target.value})}
+                    style={{
+                        width: '100%',
+                        padding: '10px',
+                        margin: '8px 0',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        outline: 'none',
+                    }}
+                    onFocus={(e) => e.target.style.border = '2px solid #007bff'}
+                    onBlur={(e) => e.target.style.border = '1px solid #ccc'}
+                />
+                <button
+                    type="submit"
+                    style={{
+                        padding: '12px',
+                        width: '100%',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Register
+                </button>
+                {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+            </form>
+            <p style={{ marginTop: '15px' }}>
+                Already have an account? <a href="/login">Login</a>
+            </p>
         </div>
     );
 };
