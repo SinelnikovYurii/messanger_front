@@ -1,105 +1,108 @@
 import { CHAT_SERVER_URL } from './api';
-import { Client } from '@stomp/stompjs';
 
 class ChatService {
     constructor() {
-        this.stompClient = null;
-        this.token = null;
+        this.webSocket = null;
         this.listeners = {
             onMessage: [],
             onConnect: [],
             onDisconnect: [],
             onError: []
         };
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
+        this.reconnectDelay = 1000;
     }
 
     connect(token) {
         return new Promise((resolve, reject) => {
             try {
-                this.stompClient = new Client({
-                    brokerURL: `${CHAT_SERVER_URL.replace('http', 'ws')}/ws/chat`,
-                    connectHeaders: {
-                        token: token
-                    },
-                    onConnect: () => {
-                        this.listeners.onConnect.forEach(callback => callback());
-                        resolve();
+                // Формируем WebSocket URL через Gateway
+                const socketUrl = `${CHAT_SERVER_URL.replace('http', 'ws')}/ws/chat?token=${token}`;
+                console.log('Connecting to WebSocket:', socketUrl);
 
-                        // Подписка на сообщения
-                        this.stompClient.subscribe('/topic/messages', (message) => {
-                            try {
-                                const parsedMessage = JSON.parse(message.body);
-                                this.listeners.onMessage.forEach(callback => callback(parsedMessage));
-                            } catch (error) {
-                                console.error('Error parsing message:', error);
-                            }
-                        });
-                    },
-                    onStompError: (frame) => {
-                        console.error('Broker reported error: ' + frame.headers['message']);
-                        this.listeners.onError.forEach(callback => callback(frame));
-                        reject(frame);
-                    },
-                    onWebSocketError: (error) => {
-                        console.error('WebSocket error:', error);
-                        this.listeners.onError.forEach(callback => callback(error));
-                        reject(error);
-                    },
-                    onDisconnect: () => {
-                        this.listeners.onDisconnect.forEach(callback => callback());
+                this.webSocket = new WebSocket(socketUrl);
+
+                this.webSocket.onopen = () => {
+                    console.log('WebSocket connection established');
+                    this.reconnectAttempts = 0; // Сброс счетчика переподключений
+                    this.listeners.onConnect.forEach(callback => callback());
+                    resolve();
+                };
+
+                this.webSocket.onmessage = (event) => {
+                    try {
+                        const parsedMessage = JSON.parse(event.data);
+                        console.log('Received message:', parsedMessage);
+                        this.listeners.onMessage.forEach(callback => callback(parsedMessage));
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
                     }
-                });
+                };
 
-                this.stompClient.activate();
+                this.webSocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.listeners.onError.forEach(callback => callback(error));
+                    reject(error);
+                };
+
+                this.webSocket.onclose = (event) => {
+                    console.log('WebSocket connection closed', event);
+                    this.listeners.onDisconnect.forEach(callback => callback());
+
+                    // Автоматическое переподключение при неожиданном закрытии
+                    if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+                        setTimeout(() => {
+                            console.log(`Attempting to reconnect... (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+                            this.reconnectAttempts++;
+                            this.connect(token);
+                        }, this.reconnectDelay);
+                    }
+                };
+
             } catch (error) {
+                console.error('Error creating WebSocket connection:', error);
                 reject(error);
             }
         });
     }
 
     disconnect() {
-        if (this.stompClient) {
-            this.stompClient.deactivate();
+        if (this.webSocket) {
+            this.webSocket.close(1000, 'Client disconnect');
+            this.webSocket = null;
         }
     }
 
     sendMessage(message) {
-        if (this.stompClient && this.stompClient.connected) {
-            this.stompClient.publish({
-                destination: '/app/chat',
-                body: JSON.stringify(message)
-            });
+        if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
+            this.webSocket.send(JSON.stringify(message));
+        } else {
+            console.error('WebSocket is not connected');
         }
     }
 
-    // Подписка на события
+    // Методы для подписки на события
     onMessage(callback) {
         this.listeners.onMessage.push(callback);
-        return () => {
-            this.listeners.onMessage = this.listeners.onMessage.filter(cb => cb !== callback);
-        };
     }
 
     onConnect(callback) {
         this.listeners.onConnect.push(callback);
-        return () => {
-            this.listeners.onConnect = this.listeners.onConnect.filter(cb => cb !== callback);
-        };
     }
 
     onDisconnect(callback) {
         this.listeners.onDisconnect.push(callback);
-        return () => {
-            this.listeners.onDisconnect = this.listeners.onDisconnect.filter(cb => cb !== callback);
-        };
     }
 
     onError(callback) {
         this.listeners.onError.push(callback);
-        return () => {
-            this.listeners.onError = this.listeners.onError.filter(cb => cb !== callback);
-        };
+    }
+
+    // Проверка состояния соединения
+    isConnected() {
+        return this.webSocket && this.webSocket.readyState === WebSocket.OPEN;
     }
 }
 
-export const chatService = new ChatService();
+export default new ChatService();

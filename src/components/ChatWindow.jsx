@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { chatService } from '../services/chatService';
+import chatService from '../services/chatService'; // Исправлен импорт с именованного на default
 import { addMessage, setConnected } from '../store/slices/chatSlice';
 
 const ChatWindow = () => {
