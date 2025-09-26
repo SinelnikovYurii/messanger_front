@@ -1,108 +1,110 @@
-import { CHAT_SERVER_URL } from './api';
-
 class ChatService {
     constructor() {
-        this.webSocket = null;
-        this.listeners = {
-            onMessage: [],
-            onConnect: [],
-            onDisconnect: [],
-            onError: []
-        };
+        this.socket = null;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
-        this.reconnectDelay = 1000;
+        this.reconnectInterval = 3000;
+        this.messageHandlers = [];
+        this.connectionHandlers = [];
     }
 
     connect(token) {
         return new Promise((resolve, reject) => {
-            try {
-                // Формируем WebSocket URL через Gateway
-                const socketUrl = `${CHAT_SERVER_URL.replace('http', 'ws')}/ws/chat?token=${token}`;
-                console.log('Connecting to WebSocket:', socketUrl);
+            // Подключаемся через Gateway на порту 8083
+            const wsUrl = `ws://localhost:8083/ws/chat?token=${token}`;
+            console.log('Connecting to WebSocket:', wsUrl);
 
-                this.webSocket = new WebSocket(socketUrl);
+            this.socket = new WebSocket(wsUrl);
 
-                this.webSocket.onopen = () => {
-                    console.log('WebSocket connection established');
-                    this.reconnectAttempts = 0; // Сброс счетчика переподключений
-                    this.listeners.onConnect.forEach(callback => callback());
-                    resolve();
-                };
+            this.socket.onopen = () => {
+                console.log('WebSocket connected successfully');
+                this.reconnectAttempts = 0;
+                this.connectionHandlers.forEach(handler => {
+                    if (handler.onConnect) handler.onConnect();
+                });
+                resolve();
+            };
 
-                this.webSocket.onmessage = (event) => {
-                    try {
-                        const parsedMessage = JSON.parse(event.data);
-                        console.log('Received message:', parsedMessage);
-                        this.listeners.onMessage.forEach(callback => callback(parsedMessage));
-                    } catch (error) {
-                        console.error('Error parsing message:', error);
-                    }
-                };
+            this.socket.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    console.log('Received message:', message);
+                    this.messageHandlers.forEach(handler => handler(message));
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            };
 
-                this.webSocket.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    this.listeners.onError.forEach(callback => callback(error));
-                    reject(error);
-                };
-
-                this.webSocket.onclose = (event) => {
-                    console.log('WebSocket connection closed', event);
-                    this.listeners.onDisconnect.forEach(callback => callback());
-
-                    // Автоматическое переподключение при неожиданном закрытии
-                    if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
-                        setTimeout(() => {
-                            console.log(`Attempting to reconnect... (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
-                            this.reconnectAttempts++;
-                            this.connect(token);
-                        }, this.reconnectDelay);
-                    }
-                };
-
-            } catch (error) {
-                console.error('Error creating WebSocket connection:', error);
+            this.socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                this.connectionHandlers.forEach(handler => {
+                    if (handler.onError) handler.onError(error);
+                });
                 reject(error);
-            }
+            };
+
+            this.socket.onclose = (event) => {
+                console.log('WebSocket connection closed', event);
+                this.connectionHandlers.forEach(handler => {
+                    if (handler.onClose) handler.onClose(event);
+                });
+
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                    setTimeout(() => {
+                        this.connect(token).catch(() => {});
+                    }, this.reconnectInterval);
+                }
+            };
         });
     }
 
     disconnect() {
-        if (this.webSocket) {
-            this.webSocket.close(1000, 'Client disconnect');
-            this.webSocket = null;
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
         }
     }
 
     sendMessage(message) {
-        if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
-            this.webSocket.send(JSON.stringify(message));
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(message));
         } else {
             console.error('WebSocket is not connected');
         }
     }
 
-    // Методы для подписки на события
-    onMessage(callback) {
-        this.listeners.onMessage.push(callback);
+    onMessage(handler) {
+        this.messageHandlers.push(handler);
     }
 
-    onConnect(callback) {
-        this.listeners.onConnect.push(callback);
+    onConnection(handlers) {
+        this.connectionHandlers.push(handlers);
     }
 
-    onDisconnect(callback) {
-        this.listeners.onDisconnect.push(callback);
+    removeMessageHandler(handler) {
+        const index = this.messageHandlers.indexOf(handler);
+        if (index > -1) {
+            this.messageHandlers.splice(index, 1);
+        }
     }
 
-    onError(callback) {
-        this.listeners.onError.push(callback);
+    removeConnectionHandler(handler) {
+        const index = this.connectionHandlers.indexOf(handler);
+        if (index > -1) {
+            this.connectionHandlers.splice(index, 1);
+        }
     }
 
-    // Проверка состояния соединения
     isConnected() {
-        return this.webSocket && this.webSocket.readyState === WebSocket.OPEN;
+        return this.socket && this.socket.readyState === WebSocket.OPEN;
     }
 }
 
-export default new ChatService();
+// Создаем единственный экземпляр сервиса
+const chatService = new ChatService();
+
+// Экспортируем и класс, и экземпляр
+export { ChatService, chatService };
+export default chatService;
