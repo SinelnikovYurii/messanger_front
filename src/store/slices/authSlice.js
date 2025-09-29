@@ -1,14 +1,21 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { authService } from '../../services/authService';
+import authService from '../../services/authService';
+import { login as loginApi, register as registerApi } from '../../services/api';
 
 export const login = createAsyncThunk(
     'auth/login',
     async (credentials, { rejectWithValue }) => {
         try {
-            const data = await authService.login(credentials);
+            const data = await loginApi(credentials);
+
+            // Сохраняем данные через AuthService
+            if (data.token && data.user) {
+                authService.setAuth(data.token, data.user);
+            }
+
             return data;
         } catch (error) {
-            return rejectWithValue(error.message || 'Login failed');
+            return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
         }
     }
 );
@@ -17,22 +24,31 @@ export const register = createAsyncThunk(
     'auth/register',
     async (userData, { rejectWithValue }) => {
         try {
-            const data = await authService.register(userData);
+            const data = await registerApi(userData);
             return data;
         } catch (error) {
-            return rejectWithValue(error.message || 'Registration failed');
+            return rejectWithValue(error.response?.data?.message || error.message || 'Registration failed');
         }
     }
 );
 
-export const getCurrentUser = createAsyncThunk(
-    'auth/getCurrentUser',
+export const validateToken = createAsyncThunk(
+    'auth/validateToken',
     async (_, { rejectWithValue }) => {
         try {
-            const data = await authService.getCurrentUser();
-            return data;
+            const isValid = await authService.validateAuthToken();
+            if (isValid) {
+                const userData = authService.getUserData();
+                return {
+                    user: userData,
+                    token: localStorage.getItem('token'),
+                    isValid: true
+                };
+            } else {
+                throw new Error('Token validation failed');
+            }
         } catch (error) {
-            return rejectWithValue(error.message || 'Failed to get user info');
+            return rejectWithValue(error.message || 'Token validation failed');
         }
     }
 );
@@ -40,9 +56,9 @@ export const getCurrentUser = createAsyncThunk(
 const authSlice = createSlice({
     name: 'auth',
     initialState: {
-        user: null,
+        user: authService.getUserData(),
         token: localStorage.getItem('token'),
-        isAuthenticated: false,
+        isAuthenticated: authService.hasToken() && authService.getUserData() !== null,
         loading: false,
         error: null
     },
@@ -55,6 +71,12 @@ const authSlice = createSlice({
         },
         clearError: (state) => {
             state.error = null;
+        },
+        setAuthFromService: (state) => {
+            // Синхронизируем Redux state с AuthService
+            state.user = authService.getUserData();
+            state.token = localStorage.getItem('token');
+            state.isAuthenticated = authService.hasToken() && authService.getUserData() !== null;
         }
     },
     extraReducers: (builder) => {
@@ -66,13 +88,17 @@ const authSlice = createSlice({
             })
             .addCase(login.fulfilled, (state, action) => {
                 state.loading = false;
+                state.user = action.payload.user;
                 state.token = action.payload.token;
                 state.isAuthenticated = true;
+                state.error = null;
             })
             .addCase(login.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
                 state.isAuthenticated = false;
+                state.user = null;
+                state.token = null;
             })
             // Register
             .addCase(register.pending, (state) => {
@@ -81,6 +107,7 @@ const authSlice = createSlice({
             })
             .addCase(register.fulfilled, (state) => {
                 state.loading = false;
+                state.error = null;
                 // После регистрации пользователь не аутентифицирован
                 // Он должен сначала залогиниться
             })
@@ -88,18 +115,26 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
-            // Get Current User
-            .addCase(getCurrentUser.fulfilled, (state, action) => {
-                state.user = action.payload;
-                state.isAuthenticated = true;
+            // Token validation
+            .addCase(validateToken.pending, (state) => {
+                state.loading = true;
             })
-            .addCase(getCurrentUser.rejected, (state) => {
+            .addCase(validateToken.fulfilled, (state, action) => {
+                state.loading = false;
+                state.user = action.payload.user;
+                state.token = action.payload.token;
+                state.isAuthenticated = true;
+                state.error = null;
+            })
+            .addCase(validateToken.rejected, (state, action) => {
+                state.loading = false;
                 state.isAuthenticated = false;
                 state.user = null;
                 state.token = null;
+                state.error = action.payload;
             });
     }
 });
 
-export const { logout, clearError } = authSlice.actions;
+export const { logout, clearError, setAuthFromService } = authSlice.actions;
 export default authSlice.reducer;

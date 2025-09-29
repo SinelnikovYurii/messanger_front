@@ -1,21 +1,69 @@
-import { userApi } from './api';
+import api from './api';
 
-export const userService = {
-    getAllUsers: async () => {
-        try {
-            const response = await userApi.get('/');
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || { message: 'Failed to fetch users' };
-        }
-    },
+const userService = {
+  // Поиск пользователей
+  searchUsers: async (query) => {
+    const response = await api.get(`/api/users/search?query=${encodeURIComponent(query)}`);
+    return response.data;
+  },
 
-    getUserById: async (id) => {
-        try {
-            const response = await userApi.get(`/${id}`);
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || { message: 'Failed to fetch user' };
-        }
-    }
+  // Получить информацию о пользователе
+  getUserInfo: async (userId) => {
+    const response = await api.get(`/api/users/${userId}`);
+    return response.data;
+  },
+
+  // Обновить профиль
+  updateProfile: async (profileData) => {
+    const response = await api.put('/api/users/profile', profileData);
+    return response.data;
+  },
+
+  // Управление друзьями
+  sendFriendRequest: async (userId) => {
+    const response = await api.post('/api/users/friends/request', { userId });
+    return response.data;
+  },
+
+  respondToFriendRequest: async (requestId, accept) => {
+    const response = await api.post('/api/users/friends/respond', {
+      requestId,
+      accept
+    });
+    return response.data;
+  },
+
+  getFriends: async () => {
+    const response = await api.get('/api/users/friends');
+    return response.data;
+  },
+
+  getIncomingFriendRequests: async () => {
+    const response = await api.get('/api/users/friends/incoming');
+    return response.data;
+  },
+
+  getOutgoingFriendRequests: async () => {
+    const response = await api.get('/api/users/friends/outgoing');
+    return response.data;
+  },
+
+  removeFriend: async (friendId) => {
+    const response = await api.delete(`/api/users/friends/${friendId}`);
+    return response.data;
+  },
+
+  // Обновить статус онлайн
+  updateOnlineStatus: async (isOnline) => {
+    const response = await api.post(`/api/users/status/online?isOnline=${isOnline}`);
+    return response.data;
+  },
+
+  // Получить всех пользователей (для совместимости)
+  getAllUsers: async () => {
+    const response = await api.get('/api/users/all');
+    return response.data;
+  }
 };
+
+export default userService;

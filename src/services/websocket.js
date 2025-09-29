@@ -6,8 +6,8 @@ export const createWebSocket = (chatId) => {
         throw new Error('No authentication token found');
     }
 
-    // Подключаемся через API Gateway, передавая токен в query-параметрах
-    return new WebSocket(`ws://localhost:8080/ws/messages?token=${token}`);
+    // Подключаемся через API Gateway на правильном порту 8083, передавая токен в query-параметрах
+    return new WebSocket(`ws://localhost:8092/ws/chat?token=${token}`);
 };
 
 export const handleWebSocketMessages = (websocket, onMessage, onError, onOpen) => {
