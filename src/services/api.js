@@ -52,7 +52,7 @@ export const authApi = axios.create({
 });
 
 export const chatApi = axios.create({
-  baseURL: 'http://localhost:8082', // Core API Service
+  baseURL: 'http://localhost:8083', // Изменяем с 8082 на 8083 (Gateway)
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -60,7 +60,7 @@ export const chatApi = axios.create({
 });
 
 export const userApi = axios.create({
-  baseURL: 'http://localhost:8082', // Core API Service
+  baseURL: 'http://localhost:8083', // Изменяем с 8082 на 8083 (Gateway)
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export const userApi = axios.create({
 });
 
 export const messageApi = axios.create({
-  baseURL: 'http://localhost:8082', // Core API Service
+  baseURL: 'http://localhost:8083', // Изменяем с 8082 на 8083 (Gateway)
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

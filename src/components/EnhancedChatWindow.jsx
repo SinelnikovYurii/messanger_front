@@ -10,7 +10,9 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
     const [showChatInfo, setShowChatInfo] = useState(false);
     const [showAddParticipants, setShowAddParticipants] = useState(false);
     const [chatInfo, setChatInfo] = useState(null);
+    const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const messagesEndRef = useRef(null);
+    const lastLoadedChatId = useRef(null);
     const dispatch = useDispatch();
     const { isConnected } = useSelector(state => state.chat);
     const { token } = useSelector(state => state.auth);
@@ -24,19 +26,87 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
     }, [messages]);
 
     useEffect(() => {
-        if (selectedChat) {
+        // Загружаем сообщения только если чат изменился и не загружается уже
+        if (selectedChat && selectedChat.id !== lastLoadedChatId.current && !isLoadingMessages) {
+            lastLoadedChatId.current = selectedChat.id;
             loadChatMessages();
             loadChatInfo();
+        } else if (!selectedChat) {
+            // Очищаем состояние если чат не выбран
+            setMessages([]);
+            setChatInfo(null);
+            lastLoadedChatId.current = null;
         }
-    }, [selectedChat]);
+    }, [selectedChat?.id]); // Используем только ID для зависимости
+
+    // Подписываемся на события чата
+    useEffect(() => {
+        // Обработчик событий чата от WebSocket/Kafka
+        const handleChatEvent = (event) => {
+            console.log('Received chat event:', event);
+
+            if (!selectedChat || event.chatId !== selectedChat.id) {
+                return; // Событие не для текущего чата
+            }
+
+            switch (event.eventType) {
+                case 'CHAT_CREATED':
+                    // Обновляем информацию о чате
+                    loadChatInfo();
+                    break;
+                case 'PARTICIPANTS_ADDED':
+                    // Добавлены новые участники
+                    loadChatInfo();
+                    break;
+                case 'PARTICIPANT_REMOVED':
+                case 'PARTICIPANT_LEFT':
+                    // Участник удален или покинул чат
+                    loadChatInfo();
+                    break;
+                case 'CREATOR_CHANGED':
+                    // Изменился создатель чата
+                    loadChatInfo();
+                    break;
+                case 'MESSAGE_RECEIVED':
+                    // Получено новое сообщение
+                    if (event.message) {
+                        setMessages(prev => {
+                            // Проверяем, нет ли уже такого сообщения
+                            const exists = prev.some(msg => msg.id === event.message.id);
+                            if (exists) {
+                                return prev;
+                            }
+                            return [...prev, event.message];
+                        });
+                    }
+                    // УБИРАЕМ автоматическую перезагрузку сообщений
+                    break;
+                default:
+                    console.log('Unhandled chat event type:', event.eventType);
+            }
+        };
+
+        // Подписываемся на события чата
+        const unsubscribeChatEvents = chatService.onChatEvent(handleChatEvent);
+
+        return () => {
+            // Отписываемся при размонтировании компонента
+            unsubscribeChatEvents();
+        };
+    }, [selectedChat?.id]); // Используем только ID для зависимости
 
     const loadChatMessages = async () => {
-        if (!selectedChat) return;
+        if (!selectedChat || isLoadingMessages) return;
+
         try {
+            setIsLoadingMessages(true);
+            console.log(`Loading messages for chat ${selectedChat.id}`);
             const chatMessages = await chatService.getChatMessages(selectedChat.id);
             setMessages(chatMessages.reverse()); // Разворачиваем, так как API возвращает в обратном порядке
         } catch (error) {
             console.error('Ошибка загрузки сообщений:', error);
+        } finally {
+            setIsLoadingMessages(false);
         }
     };
 
@@ -45,6 +115,8 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
         try {
             const info = await chatService.getChatInfo(selectedChat.id);
             setChatInfo(info);
+            // Уведомляем родительский компонент об обновлении чата
+            if (onChatUpdate) onChatUpdate(info);
         } catch (error) {
             console.error('Ошибка загрузки информации о чате:', error);
         }
@@ -54,14 +126,24 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
         e.preventDefault();
         if (newMessage.trim() && selectedChat) {
             try {
-                const messageData = {
-                    chatId: selectedChat.id,
+                // Отправляем сообщение через WebSocket
+                chatService.sendChatMessage(newMessage.trim(), selectedChat.id);
+
+                // Добавляем локально оптимистичное обновление
+                const optimisticMessage = {
+                    id: `temp-${Date.now()}`,
                     content: newMessage.trim(),
-                    messageType: 'TEXT'
+                    chatId: selectedChat.id,
+                    messageType: 'TEXT',
+                    sentAt: new Date().toISOString(),
+                    sender: {
+                        id: null, // Будет заполнено после подтверждения
+                        username: 'Вы'
+                    },
+                    isOptimistic: true // Флаг оптимистичного обновления
                 };
 
-                const sentMessage = await chatService.sendMessage(messageData);
-                setMessages(prev => [...prev, sentMessage]);
+                setMessages(prev => [...prev, optimisticMessage]);
                 setNewMessage('');
             } catch (error) {
                 console.error('Ошибка отправки сообщения:', error);
@@ -78,12 +160,12 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
             setChatInfo(updatedChat);
             onChatUpdate && onChatUpdate(updatedChat);
 
-            // Показываем системное сообщение
+            // Показываем системное сообщение локально
             const systemMessage = {
                 id: Date.now(),
                 content: `Добавлены новые участники: ${selectedUsers.map(u => u.username).join(', ')}`,
                 messageType: 'SYSTEM',
-                createdAt: new Date(),
+                createdAt: new Date().toISOString(),
                 sender: null
             };
             setMessages(prev => [...prev, systemMessage]);

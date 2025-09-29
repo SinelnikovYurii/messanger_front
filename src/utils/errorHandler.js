@@ -10,24 +10,37 @@ class ErrorHandler {
         if (error.response?.status === 401 || error.response?.status === 403) {
             console.log('Unauthorized access detected');
 
-            // КРИТИЧНО: При 401/403 всегда очищаем данные авторизации
-            // Это необходимо после изменения JWT секретного ключа
-            const token = localStorage.getItem('token');
-            const user = localStorage.getItem('user');
+            // Проверяем, не относится ли запрос к API друзей
+            const isFriendsEndpoint = error.config?.url?.includes('/friends/');
 
-            if (token || user) {
-                console.log('Clearing invalid auth data due to 401/403 response');
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+            // НЕ очищаем данные авторизации для запросов API друзей,
+            // так как проблема может быть в формате запроса, а не в токене
+            if (!isFriendsEndpoint) {
+                const token = localStorage.getItem('token');
+                const user = localStorage.getItem('user');
 
-                // Диспатчим событие об изменении авторизации
-                window.dispatchEvent(new Event('authChange'));
+                if (token || user) {
+                    console.log('Clearing invalid auth data due to 401/403 response');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+
+                    // Диспатчим событие об изменении авторизации
+                    window.dispatchEvent(new Event('authChange'));
+                }
+            } else {
+                console.log('Сохраняем токен для запросов API друзей, несмотря на ошибку 403');
             }
 
             // Проверяем, не был ли недавно редирект
             const now = Date.now();
             if (now - this.lastRedirectTime < this.redirectCooldown) {
                 console.log('Redirect cooldown active, skipping redirect');
+                return true;
+            }
+
+            // Не перенаправляем на логин при ошибках в API друзей
+            if (isFriendsEndpoint) {
+                console.log('Skipping login redirect for friends API error');
                 return true;
             }
 

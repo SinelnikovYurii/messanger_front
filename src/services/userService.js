@@ -26,11 +26,47 @@ const userService = {
   },
 
   respondToFriendRequest: async (requestId, accept) => {
-    const response = await api.post('/api/users/friends/respond', {
-      requestId,
-      accept
-    });
-    return response.data;
+    console.log('userService: Отправка ответа на запрос дружбы:', { requestId, accept });
+    try {
+      // Создаем объект запроса с необходимыми полями
+      const payload = {
+        requestId: requestId,
+        accept: accept    // Добавляем поле accept, которое ожидает бэкенд
+      };
+
+      // Логируем точный payload
+      console.log('userService: Payload для отправки:', JSON.stringify(payload));
+
+      // Логируем конфигурацию запроса перед отправкой
+      console.log('userService: URL запроса:', '/api/users/friends/respond');
+      console.log('userService: Метод запроса:', 'POST');
+
+      // Отправляем запрос
+      const response = await api.post('/api/users/friends/respond', payload);
+
+      console.log('userService: Успешный ответ от сервера:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('userService: Ошибка при ответе на запрос дружбы:', error);
+
+      // Расширенное логирование ошибки
+      if (error.request) {
+        console.error('userService: Детали отправленного запроса:', error.request);
+      }
+
+      if (error.response) {
+        console.error('userService: Статус ошибки:', error.response.status);
+        console.error('userService: Заголовки ответа:', error.response.headers);
+        console.error('userService: Данные ошибки:', error.response.data);
+      }
+
+      // Проверка, не связана ли ошибка с авторизацией
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        console.warn('userService: Возможная проблема с авторизацией - проверьте JWT токен');
+      }
+
+      throw error;
+    }
   },
 
   getFriends: async () => {

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
-import { setToken } from '../utils/auth';
 
 const RegisterForm = ({ setIsAuthenticated }) => {
     const [credentials, setCredentials] = useState({
@@ -26,8 +25,8 @@ const RegisterForm = ({ setIsAuthenticated }) => {
             const { confirmPassword, ...data } = credentials;
             const response = await authApi.post('/auth/register', data);
             if (response.status === 200) {
-                setToken(response.data.token);
-                setIsAuthenticated(true);
+                // После успешной регистрации просто перенаправляем на страницу логина
+                // без установки токена и флага аутентификации
                 navigate('/login');
             }
         } catch (err) {

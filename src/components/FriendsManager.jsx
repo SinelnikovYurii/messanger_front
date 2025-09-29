@@ -11,11 +11,59 @@ const FriendsManager = ({ onStartChat }) => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [error, setError] = useState(null);
 
+  // Загружаем все данные при монтировании компонента
   useEffect(() => {
-    loadData();
+    loadAllData();
+  }, []);
+
+  // Загрузка данных при переключении вкладок
+  useEffect(() => {
+    loadTabData();
   }, [activeTab]);
 
-  const loadData = async () => {
+  // Загружает данные для всех вкладок одновременно
+  const loadAllData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [friendsData, incomingData, outgoingData] = await Promise.all([
+        userService.getFriends(),
+        userService.getIncomingFriendRequests(),
+        userService.getOutgoingFriendRequests()
+      ]);
+
+      console.log("Данные о друзьях:", friendsData);
+
+      // Подробный вывод структуры входящих запросов
+      console.log("Входящие запросы:", incomingData);
+      if (incomingData && incomingData.length > 0) {
+        console.log("Структура первого входящего запроса (все поля):");
+        for (const key in incomingData[0]) {
+          console.log(`Поле '${key}':`, incomingData[0][key]);
+        }
+      }
+
+      console.log("Исходящие запросы:", outgoingData);
+
+      setFriends(friendsData);
+      setIncomingRequests(incomingData);
+      setOutgoingRequests(outgoingData);
+    } catch (error) {
+      console.error('Ошибка загрузки данных:', error);
+      setError('Не удалось загрузить данные');
+
+      // Проверяем, не связана ли ошибка с авторизацией
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        // Обработка ошибки авторизации без перенаправления
+        console.log('Ошибка авторизации, но не перенаправляем на логин');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Загружает данные только для текущей активной вкладки
+  const loadTabData = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -34,32 +82,85 @@ const FriendsManager = ({ onStartChat }) => {
           break;
       }
     } catch (error) {
-      console.error('Ошибка загрузки данных:', error);
+      console.error('Ошибка загрузки данных для вкладки:', error);
       setError('Не удалось загрузить данные');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAcceptFriendRequest = async (requestId) => {
+  const handleAcceptFriendRequest = async (request) => {
     try {
-      await userService.respondToFriendRequest(requestId, true);
-      await loadData(); // Обновляем данные
-      // Показываем уведомление об успехе
+      // Детальное логирование структуры объекта запроса
+      console.log('FriendsManager: Весь объект запроса дружбы (accept):', JSON.stringify(request));
+
+      // Проверяем все возможные поля, которые могут содержать ID запроса дружбы
+      const requestId = request.friendshipId || request.requestId || request.friendship_id ||
+                       request.friendRequest?.id || request.friendship?.id || request.request?.id ||
+                       request.sender_id || request.senderId || request.userId || request.id;
+
+      console.log('FriendsManager: Используемый ID запроса дружбы:', requestId);
+      console.log('FriendsManager: Тип ID:', typeof requestId);
+      console.log('FriendsManager: Отправляем данные:', JSON.stringify({ requestId, accept: true }));
+
+      // Фиксируем точное время запроса для анализа задержек
+      const startTime = Date.now();
+
+      // Вызываем API сервиса с правильным ID
+      const response = await userService.respondToFriendRequest(requestId, true);
+
+      // Фиксируем время ответа
+      const endTime = Date.now();
+      console.log(`FriendsManager: Время запроса: ${endTime - startTime}ms`);
+
+      console.log('FriendsManager: Ответ сервера:', response);
+
+      await loadAllData(); // Обновляем все данные после принятия запроса
       setError(null);
     } catch (error) {
-      console.error('Ошибка принятия запроса:', error);
-      setError('Не удалось принять запрос дружбы');
+      console.error('FriendsManager: Детали ошибки принятия запроса:', error);
+      if (error.response) {
+        console.error('FriendsManager: Статус ошибки:', error.response.status);
+        console.error('FriendsManager: Данные ошибки:', error.response.data);
+      }
+      setError('Не удалось принять запрос дружбы. Возможно, запрос был удален или уже обработан.');
     }
   };
 
-  const handleRejectFriendRequest = async (requestId) => {
+  const handleRejectFriendRequest = async (request) => {
     try {
-      await userService.respondToFriendRequest(requestId, false);
-      await loadData(); // Обновляем данные
+      // Детальное логирование структуры объекта запроса
+      console.log('FriendsManager: Весь объект запроса дружбы (reject):', JSON.stringify(request));
+
+      // Проверяем все возможные поля, которые могут содержать ID запроса дружбы
+      const requestId = request.friendshipId || request.requestId || request.friendship_id ||
+                       request.friendRequest?.id || request.friendship?.id || request.request?.id ||
+                       request.sender_id || request.senderId || request.userId || request.id;
+
+      console.log('FriendsManager: Используемый ID для отклонения запроса дружбы:', requestId);
+      console.log('FriendsManager: Тип ID:', typeof requestId);
+      console.log('FriendsManager: Отправляем данные для отклонения:', JSON.stringify({ requestId, accept: false }));
+
+      // Фиксируем точное время запроса для анализа задержек
+      const startTime = Date.now();
+
+      // Вызываем API сервиса с правильным ID
+      const response = await userService.respondToFriendRequest(requestId, false);
+
+      // Фиксируем время ответа
+      const endTime = Date.now();
+      console.log(`FriendsManager: Время запроса: ${endTime - startTime}ms`);
+
+      console.log('FriendsManager: Ответ сервера при отклонении:', response);
+
+      await loadAllData(); // Обновляем все данные
       setError(null);
     } catch (error) {
-      console.error('Ошибка отклонения запроса:', error);
+      console.error('FriendsManager: Детали ошибки отклонения запроса:', error);
+      if (error.response) {
+        console.error('FriendsManager: Статус ошибки:', error.response.status);
+        console.error('FriendsManager: Данные ошибки:', error.response.data);
+      }
       setError('Не удалось отклонить запрос дружбы');
     }
   };
@@ -68,7 +169,7 @@ const FriendsManager = ({ onStartChat }) => {
     if (window.confirm('Вы уверены, что хотите удалить этого пользователя из друзей?')) {
       try {
         await userService.removeFriend(friendId);
-        await loadData(); // Обновляем данные
+        await loadAllData(); // Обновляем все данные
         setError(null);
       } catch (error) {
         console.error('Ошибка удаления друга:', error);
@@ -239,13 +340,13 @@ const FriendsManager = ({ onStartChat }) => {
                   renderUserCard(request, (
                     <>
                       <button
-                        onClick={() => handleAcceptFriendRequest(request.id)}
+                        onClick={() => handleAcceptFriendRequest(request)}
                         className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
                       >
                         Принять
                       </button>
                       <button
-                        onClick={() => handleRejectFriendRequest(request.id)}
+                        onClick={() => handleRejectFriendRequest(request)}
                         className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
                       >
                         Отклонить
@@ -284,7 +385,7 @@ const FriendsManager = ({ onStartChat }) => {
         onClose={() => setShowSearchModal(false)}
         onUserSelect={() => {
           setShowSearchModal(false);
-          loadData(); // Обновляем данные после взаимодействия с пользователем
+          loadAllData(); // Обновляем данные после взаимодействия с пользователем
         }}
         mode="friends"
       />

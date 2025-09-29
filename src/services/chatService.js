@@ -8,6 +8,7 @@ class ChatService {
         this.reconnectInterval = 3000;
         this.messageHandlers = [];
         this.connectionHandlers = [];
+        this.chatEventHandlers = []; // Добавляем обработчики событий чата
         this.isAuthenticated = false;
         this.currentToken = null;
     }
@@ -46,6 +47,11 @@ class ChatService {
                         this.connectionHandlers.forEach(handler => {
                             if (handler.onError) handler.onError(new Error(message.content));
                         });
+                        return;
+                    } else if (message.type === 'CHAT_EVENT') {
+                        // Обрабатываем события чата, отправленные через Kafka
+                        console.log('Chat event received:', message);
+                        this.chatEventHandlers.forEach(handler => handler(message));
                         return;
                     }
 
@@ -157,6 +163,15 @@ class ChatService {
         this.connectionHandlers.push(handlers);
     }
 
+    // Добавляем обработчик событий чата
+    onChatEvent(handler) {
+        this.chatEventHandlers.push(handler);
+        // Возвращаем функцию для отписки
+        return () => {
+            this.removeChatEventHandler(handler);
+        };
+    }
+
     removeMessageHandler(handler) {
         const index = this.messageHandlers.indexOf(handler);
         if (index > -1) {
@@ -168,6 +183,13 @@ class ChatService {
         const index = this.connectionHandlers.indexOf(handler);
         if (index > -1) {
             this.connectionHandlers.splice(index, 1);
+        }
+    }
+
+    removeChatEventHandler(handler) {
+        const index = this.chatEventHandlers.indexOf(handler);
+        if (index > -1) {
+            this.chatEventHandlers.splice(index, 1);
         }
     }
 
