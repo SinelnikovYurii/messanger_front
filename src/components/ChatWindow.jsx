@@ -67,7 +67,19 @@ const ChatWindow = () => {
         // Подписываемся на сообщения
         const handleMessage = (message) => {
             console.log('ChatWindow: Received message:', message);
+
+            // Получаем ID текущего пользователя
+            const currentUser = authService.getUserData();
+            const currentUserId = currentUser?.id;
+
+            // Игнорируем сообщения от самого себя (echo prevention)
+            if (message.userId === currentUserId || message.senderId === currentUserId) {
+                console.log('ChatWindow: Ignoring echo message from self:', message);
+                return;
+            }
+
             if (isMountedRef.current) {
+                console.log('ChatWindow: Adding message from other user:', message);
                 setMessages(prev => [...prev, message]);
             }
         };
@@ -154,16 +166,12 @@ const ChatWindow = () => {
         }
 
         const currentUser = authService.getUserData();
-        const message = {
-            content: newMessage.trim(),
-            timestamp: new Date().toISOString(),
-            sender: currentUser?.username || 'You'
-        };
 
         try {
-            chatService.sendMessage(message);
-            // Добавляем сообщение в локальный стейт для отзывчивости UI
-            setMessages(prev => [...prev, message]);
+            // Используем sendChatMessage с chatId для правильной работы с исправленным SessionManager
+            chatService.sendChatMessage(newMessage.trim(), 1);
+
+            // НЕ добавляем сообщение в локальный стейт - оно придет через WebSocket от других участников
             setNewMessage('');
             setConnectionError(null);
         } catch (error) {
@@ -262,4 +270,3 @@ const ChatWindow = () => {
 };
 
 export default ChatWindow;
-

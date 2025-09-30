@@ -15,7 +15,7 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
     const lastLoadedChatId = useRef(null);
     const dispatch = useDispatch();
     const { isConnected } = useSelector(state => state.chat);
-    const { token } = useSelector(state => state.auth);
+    const { token, user } = useSelector(state => state.auth);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,7 +37,7 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
             setChatInfo(null);
             lastLoadedChatId.current = null;
         }
-    }, [selectedChat?.id]); // Используем только ID для зависимости
+    }, [selectedChat?.id, isLoadingMessages]); // Добавляем isLoadingMessages в зависимости, чтобы предотвратить повторные загрузки
 
     // Подписываемся на события чата
     useEffect(() => {
@@ -86,12 +86,66 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
             }
         };
 
+        // Обработчик всех WebSocket сообщений
+        const handleWebSocketMessage = (message) => {
+            console.log('Received chat message in ChatWindow:', message);
+
+            // Обрабатываем только сообщения чата
+            if (message.type === 'CHAT_MESSAGE' && message.chatId === selectedChat?.id) {
+
+                // Получаем ID текущего пользователя
+                const currentUserId = getCurrentUserId();
+
+                // Игнорируем сообщения от самого себя (echo prevention)
+                if (message.userId === currentUserId || message.senderId === currentUserId) {
+                    console.log('Ignoring echo message from self:', message);
+                    return;
+                }
+
+                // Это новое сообщение для текущего чата от другого пользователя
+                setMessages(prev => {
+                    // Проверяем, нет ли уже такого сообщения
+                    const exists = prev.some(msg =>
+                        msg.id === message.id ||
+                        (msg.content === message.content &&
+                         msg.sender?.id === (message.userId || message.senderId) &&
+                         Math.abs(new Date(msg.sentAt || msg.createdAt) - new Date(message.timestamp)) < 2000)
+                    );
+
+                    if (exists) {
+                        console.log('Message already exists, skipping:', message);
+                        return prev;
+                    }
+
+                    // Создаем объект сообщения
+                    const newMessage = {
+                        id: message.id || `ws-${Date.now()}`,
+                        content: message.content,
+                        chatId: message.chatId,
+                        messageType: 'TEXT',
+                        createdAt: message.timestamp || new Date().toISOString(),
+                        sender: {
+                            id: message.senderId || message.userId,
+                            username: message.senderUsername || message.username || 'Пользователь'
+                        }
+                    };
+
+                    console.log('Adding new message from other user:', newMessage);
+                    return [...prev, newMessage];
+                });
+            }
+        };
+
         // Подписываемся на события чата
         const unsubscribeChatEvents = chatService.onChatEvent(handleChatEvent);
+
+        // Подписываемся на все WebSocket сообщения
+        const unsubscribeMessages = chatService.onMessage(handleWebSocketMessage);
 
         return () => {
             // Отписываемся при размонтировании компонента
             unsubscribeChatEvents();
+            unsubscribeMessages();
         };
     }, [selectedChat?.id]); // Используем только ID для зависимости
 
@@ -125,6 +179,13 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (newMessage.trim() && selectedChat) {
+            // Проверяем состояние WebSocket соединения
+            if (!chatService.isConnected()) {
+                console.error('WebSocket is not connected');
+                alert('Нет соединения с сервером. Попробуйте позже.');
+                return;
+            }
+
             try {
                 // Отправляем сообщение через WebSocket
                 chatService.sendChatMessage(newMessage.trim(), selectedChat.id);
@@ -137,7 +198,7 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
                     messageType: 'TEXT',
                     sentAt: new Date().toISOString(),
                     sender: {
-                        id: null, // Будет заполнено после подтверждения
+                        id: getCurrentUserId(),
                         username: 'Вы'
                     },
                     isOptimistic: true // Флаг оптимистичного обновления
@@ -147,6 +208,7 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
                 setNewMessage('');
             } catch (error) {
                 console.error('Ошибка отправки сообщения:', error);
+                alert('Ошибка отправки сообщения');
             }
         }
     };
@@ -203,15 +265,24 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
     };
 
     const getCurrentUserId = () => {
-        // TODO: Получить ID текущего пользователя из Redux store
-        return 1; // Заглушка
+        return user?.id || null;
     };
 
     const formatTime = (timestamp) => {
-        return new Date(timestamp).toLocaleTimeString('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        if (!timestamp) return '';
+        try {
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) {
+                return '';
+            }
+            return date.toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            console.error('Error formatting time:', error, timestamp);
+            return '';
+        }
     };
 
     if (!selectedChat) {
@@ -317,7 +388,7 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
                                         ? 'opacity-75'
                                         : 'opacity-60'
                                 }`}>
-                                    {formatTime(message.createdAt)}
+                                    {formatTime(message.createdAt || message.sentAt)}
                                     {message.isEdited && <span className="ml-1">(изм.)</span>}
                                 </div>
                             </div>

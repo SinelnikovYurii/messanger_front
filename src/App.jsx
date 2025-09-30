@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
-import ChatPage from './pages/ChatPage';
+import EnhancedChatPage from './pages/EnhancedChatPage'; // Используем EnhancedChatPage вместо ChatPage
 import FriendsPage from './pages/FriendsPage';
 import authService from './services/authService';
 import TokenCleaner from './utils/tokenCleaner';
@@ -140,7 +140,7 @@ function App() {
                 <Route path="/" element={<Navigate to={isAuthenticated ? '/chat' : '/login'} replace />} />
                 <Route path="/login" element={isAuthenticated ? <Navigate to="/chat" replace /> : <LoginForm setIsAuthenticated={setIsAuthenticated} />} />
                 <Route path="/register" element={isAuthenticated ? <Navigate to="/chat" replace /> : <RegisterForm setIsAuthenticated={setIsAuthenticated} />} />
-                <Route path="/chat" element={isAuthenticated ? <ChatPage /> : <Navigate to="/login" replace />} />
+                <Route path="/chat" element={isAuthenticated ? <EnhancedChatPage /> : <Navigate to="/login" replace />} />
                 <Route path="/friends" element={isAuthenticated ? <FriendsPage /> : <Navigate to="/login" replace />} />
             </Routes>
         </Router>

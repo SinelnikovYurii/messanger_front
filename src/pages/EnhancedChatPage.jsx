@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import chatService from '../services/chatService';
+import authService from '../services/authService';
 import EnhancedChatWindow from '../components/EnhancedChatWindow';
 import UserSearchModal from '../components/UserSearchModal';
 import CreateGroupChatModal from '../components/CreateGroupChatModal';
@@ -15,9 +16,67 @@ const ChatPage = () => {
   const [showFriends, setShowFriends] = useState(false);
   const [activeTab, setActiveTab] = useState('chats');
   const [loading, setLoading] = useState(true);
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
 
-  const { user } = useSelector(state => state.auth);
+  const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
+
+  // Инициализация WebSocket соединения
+  useEffect(() => {
+    const initializeWebSocket = async () => {
+      if (!token) {
+        console.log('No token available for WebSocket connection');
+        return;
+      }
+
+      try {
+        console.log('Initializing WebSocket connection...');
+        await chatService.connect(token);
+        setIsWebSocketConnected(true);
+        setConnectionError(null);
+        console.log('WebSocket connected successfully');
+      } catch (error) {
+        console.error('WebSocket connection failed:', error);
+        setIsWebSocketConnected(false);
+        setConnectionError('Ошибка подключения к серверу сообщений');
+      }
+    };
+
+    // Обработчики WebSocket соединения
+    const connectionHandlers = {
+      onConnect: () => {
+        console.log('WebSocket reconnected');
+        setIsWebSocketConnected(true);
+        setConnectionError(null);
+      },
+      onError: (error) => {
+        console.error('WebSocket error:', error);
+        setIsWebSocketConnected(false);
+        setConnectionError('Ошибка соединения с сервером');
+      },
+      onClose: (event) => {
+        console.log('WebSocket connection closed', event);
+        setIsWebSocketConnected(false);
+        if (event.code !== 1000) {
+          setConnectionError('Соединение потеряно, переподключение...');
+        }
+      }
+    };
+
+    chatService.onConnection(connectionHandlers);
+
+    // Инициализируем WebSocket
+    initializeWebSocket();
+
+    // Очистка при размонтировании
+    return () => {
+      console.log('Cleaning up WebSocket connection');
+      chatService.removeConnectionHandler(connectionHandlers);
+      chatService.disconnect();
+      setIsWebSocketConnected(false);
+    };
+  }, [token]);
 
   useEffect(() => {
     loadChats();
@@ -137,8 +196,13 @@ const ChatPage = () => {
                   {user?.username || 'Пользователь'}
                 </h1>
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-600">В сети</span>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${isWebSocketConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="text-sm text-gray-600">
+                    {isWebSocketConnected ? 'В сети' : 'Подключение...'}
+                  </span>
+                  {connectionError && (
+                    <span className="text-xs text-red-500 ml-2">({connectionError})</span>
+                  )}
                 </div>
               </div>
             </div>

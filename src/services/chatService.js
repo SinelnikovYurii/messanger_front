@@ -42,6 +42,16 @@ class ChatService {
                     // Обрабатываем различные типы сообщений
                     if (message.type === 'AUTH_SUCCESS') {
                         console.log('Authentication confirmed:', message);
+                        return; // Не передаем дальше
+                    } else if (message.type === 'SYSTEM_MESSAGE') {
+                        console.log('System message:', message.content);
+                        return; // Не передаем дальше
+                    } else if (message.type === 'MESSAGE_SENT') {
+                        console.log('Message sent confirmation:', message.content);
+                        return; // Не передаем дальше - это только подтверждение
+                    } else if (message.type === 'PONG') {
+                        console.log('Received pong');
+                        return; // Не передаем дальше
                     } else if (message.type === 'ERROR') {
                         console.error('WebSocket error:', message.content);
                         this.connectionHandlers.forEach(handler => {
@@ -55,8 +65,10 @@ class ChatService {
                         return;
                     }
 
-                    // Передаем все сообщения обработчикам
-                    this.messageHandlers.forEach(handler => handler(message));
+                    // Передаем только значимые сообщения обработчикам
+                    if (message.type === 'CHAT_MESSAGE' || message.type === 'MESSAGE') {
+                        this.messageHandlers.forEach(handler => handler(message));
+                    }
                 } catch (error) {
                     console.error('Error parsing WebSocket message:', error);
                     // Если не JSON, то передаем как текст
@@ -118,8 +130,27 @@ class ChatService {
     sendWebSocketMessage(message) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN && this.isAuthenticated) {
             this.socket.send(JSON.stringify(message));
+            return true;
         } else {
             console.error('WebSocket is not connected or not authenticated');
+            console.log('Socket state:', {
+                exists: !!this.socket,
+                readyState: this.socket?.readyState,
+                isAuthenticated: this.isAuthenticated,
+                readyStateText: this.getReadyStateText()
+            });
+            return false;
+        }
+    }
+
+    getReadyStateText() {
+        if (!this.socket) return 'No socket';
+        switch (this.socket.readyState) {
+            case WebSocket.CONNECTING: return 'CONNECTING';
+            case WebSocket.OPEN: return 'OPEN';
+            case WebSocket.CLOSING: return 'CLOSING';
+            case WebSocket.CLOSED: return 'CLOSED';
+            default: return 'UNKNOWN';
         }
     }
 
@@ -130,18 +161,10 @@ class ChatService {
             chatId: chatId,
             timestamp: new Date().toISOString()
         };
-        this.sendWebSocketMessage(message);
-    }
-
-    // Метод для отправки простых сообщений (используется в ChatWindow)
-    sendMessage(messageData) {
-        const message = {
-            type: 'MESSAGE',
-            content: messageData.content,
-            sender: messageData.sender,
-            timestamp: messageData.timestamp || new Date().toISOString()
-        };
-        this.sendWebSocketMessage(message);
+        const sent = this.sendWebSocketMessage(message);
+        if (!sent) {
+            throw new Error('Не удалось отправить сообщение: WebSocket не подключен');
+        }
     }
 
     ping() {
