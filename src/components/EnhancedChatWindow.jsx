@@ -17,6 +17,9 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
     const { isConnected } = useSelector(state => state.chat);
     const { token, user } = useSelector(state => state.auth);
 
+    const addfriend_icon = 'addfriend.png'; // Путь к иконке добавления друга
+    const info_icon = 'info.png'; // Путь к иконке информации
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -318,14 +321,14 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
                                         className="text-blue-600 hover:text-blue-800 p-2"
                                         title="Добавить участников"
                                     >
-                                        👥+
+                                        <img src={addfriend_icon} alt="" className="w-5 h-5 opacity-90 group-hover:opacity-100" draggable="false" />
                                     </button>
                                     <button
                                         onClick={handleLeaveChat}
                                         className="text-red-600 hover:text-red-800 p-2"
                                         title="Покинуть чат"
                                     >
-                                        🚪
+                                        Выйти
                                     </button>
                                 </>
                             )}
@@ -334,7 +337,7 @@ const ChatWindow = ({ selectedChat, onChatUpdate }) => {
                                 className="text-gray-600 hover:text-gray-800 p-2"
                                 title="Информация о чате"
                             >
-                                ℹ️
+                                <img src={info_icon} alt="" className="w-5 h-5 opacity-90 group-hover:opacity-100" draggable="false" />
                             </button>
                         </div>
                     </div>

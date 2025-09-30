@@ -16,6 +16,7 @@ const ChatPage = () => {
     const [unreadCounts, setUnreadCounts] = useState({});
     const { isAuthenticated, user } = useSelector(state => state.auth);
 
+    const addfriend_icon = 'addfriend_icon.png';
     // Загружаем чаты при монтировании компонента
     useEffect(() => {
         if (isAuthenticated) {
@@ -147,7 +148,7 @@ const ChatPage = () => {
                                 className="bg-green-500 hover:bg-green-600 text-white p-2 rounded"
                                 title="Новый групповой чат"
                             >
-                                👥+
+                                <img src={logout_icon} alt="" className="w-5 h-5 opacity-90 group-hover:opacity-100" draggable="false" />
                             </button>
                         </div>
                     </div>
@@ -194,7 +195,7 @@ const ChatPage = () => {
                                                     )}
                                                 </h3>
                                                 {chat.lastMessage && (
-                                                    <p className="text-sm text-gray-500 truncate mt-1" style={{ maxWidth: '180px' }}>
+                                                    <p className="text-sm text-gray-500 truncate mt-1" style={{ maxWidth: '240px' }}>
                                                         {chat.lastMessage.messageType === 'SYSTEM' ? (
                                                             <i>{chat.lastMessage.content}</i>
                                                         ) : (

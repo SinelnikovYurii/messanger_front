@@ -54,27 +54,45 @@ const Navigation = () => {
   return (
     <nav className="bg-white border-b border-gray-200 px-4 py-2">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-bold text-gray-800">Мессенджер</h1>
-          <div className="flex space-x-1">
+        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">Мессенджер</h1>
+          <div className="hidden sm:flex space-x-1">
             {navItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg transition-colors ${
                   location.pathname === item.path
                     ? 'bg-blue-500 text-white'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span className="whitespace-nowrap">{item.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Мобильная навигация */}
+          <div className="flex sm:hidden space-x-1">
+            {navItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`flex items-center justify-center p-2 rounded-lg transition-colors ${
+                  location.pathname === item.path
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                title={item.label}
+              >
+                {item.icon}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
           {user && (
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -82,18 +100,21 @@ const Navigation = () => {
                   {user.username?.charAt(0).toUpperCase() || 'U'}
                 </span>
               </div>
-              <span className="text-gray-700">{user.username || 'Пользователь'}</span>
+              <span className="text-gray-700 hidden sm:block truncate max-w-32">
+                {user.username || 'Пользователь'}
+              </span>
             </div>
           )}
 
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors"
+            className="flex items-center space-x-1 text-gray-600 hover:text-red-600 transition-colors p-2 sm:px-3 sm:py-2 rounded-lg hover:bg-gray-100"
+            title="Выход"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span>Выход</span>
+            <span className="hidden sm:inline">Выход</span>
           </button>
         </div>
       </div>

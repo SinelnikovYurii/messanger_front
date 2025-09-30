@@ -22,6 +22,10 @@ const ChatPage = () => {
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
 
+  const logout_icon = 'logout.png';
+  const profile_icon = 'profile.png';
+  const group_icon = 'group.png';
+
   // Инициализация WebSocket соединения
   useEffect(() => {
     const initializeWebSocket = async () => {
@@ -208,18 +212,18 @@ const ChatPage = () => {
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => {/* TODO: Открыть настройки профиля */}}
+                onClick={() => {}}
                 className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full"
                 title="Настройки профиля"
               >
-                ⚙️
+                <img src={profile_icon} alt="" className="w-5 h-5 opacity-90 group-hover:opacity-100" draggable="false" />
               </button>
               <button
                 onClick={handleLogout}
-                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full"
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full"
                 title="Выйти"
               >
-                🚪
+                <img src={logout_icon} alt="" className="w-5 h-5 opacity-90 group-hover:opacity-100" draggable="false" />
               </button>
             </div>
           </div>
@@ -300,7 +304,7 @@ const ChatPage = () => {
                         />
                       ) : (
                         <span className="text-gray-600 font-semibold">
-                          {chat.chatType === 'GROUP' ? '👥' : getChatTitle(chat).charAt(0).toUpperCase()}
+                          {chat.chatType === 'GROUP' ? <img src={group_icon} alt="" className="w-5 h-5 opacity-90 group-hover:opacity-100" draggable="false" /> : getChatTitle(chat).charAt(0).toUpperCase()}
                         </span>
                       )}
                     </div>
@@ -329,9 +333,7 @@ const ChatPage = () => {
           )}
 
           {activeTab === 'friends' && (
-            <div className="p-4">
-              <FriendsManager />
-            </div>
+            <FriendsManager />
           )}
         </div>
       </div>

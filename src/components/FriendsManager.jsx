@@ -185,9 +185,9 @@ const FriendsManager = ({ onStartChat }) => {
   };
 
   const renderUserCard = (user, actions) => (
-    <div key={user.id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-      <div className="flex items-center">
-        <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4 relative">
+    <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow gap-4">
+      <div className="flex items-center flex-1 min-w-0">
+        <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-4 relative flex-shrink-0">
           {user.profilePictureUrl ? (
             <img
               src={user.profilePictureUrl}
@@ -204,15 +204,15 @@ const FriendsManager = ({ onStartChat }) => {
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
           )}
         </div>
-        <div>
-          <div className="font-medium text-lg">{user.username}</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-medium text-lg truncate">{user.username}</div>
           {(user.firstName || user.lastName) && (
-            <div className="text-gray-600">
+            <div className="text-gray-600 truncate">
               {user.firstName} {user.lastName}
             </div>
           )}
           <div className="flex items-center mt-1">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 truncate">
               {user.isOnline ? (
                 <span className="text-green-600 font-medium">В сети</span>
               ) : (
@@ -222,24 +222,24 @@ const FriendsManager = ({ onStartChat }) => {
           </div>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-shrink-0 justify-end sm:justify-start">
         {actions}
       </div>
     </div>
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="w-full h-full p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold">Управление друзьями</h1>
         <button
           onClick={() => setShowSearchModal(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          Найти пользователей
+          <span className="whitespace-nowrap">Найти пользователей</span>
         </button>
       </div>
 
@@ -250,37 +250,86 @@ const FriendsManager = ({ onStartChat }) => {
         </div>
       )}
 
-      {/* Табы */}
-      <div className="flex border-b border-gray-200 mb-6">
+      {/* Карточки-статистика вместо табов */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <button
           onClick={() => setActiveTab('friends')}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
             activeTab === 'friends'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'border-blue-500 bg-blue-50 shadow-md'
+              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
           }`}
         >
-          Друзья ({friends.length})
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <div className={`text-2xl font-bold ${activeTab === 'friends' ? 'text-blue-600' : 'text-gray-900'}`}>
+                {friends.length}
+              </div>
+              <div className={`text-sm ${activeTab === 'friends' ? 'text-blue-600' : 'text-gray-600'}`}>
+                Друзья
+              </div>
+            </div>
+            <div className={`p-2 rounded-full ${activeTab === 'friends' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+              <svg className={`w-6 h-6 ${activeTab === 'friends' ? 'text-blue-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+          </div>
         </button>
+
         <button
           onClick={() => setActiveTab('incoming')}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
             activeTab === 'incoming'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'border-green-500 bg-green-50 shadow-md'
+              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
           }`}
         >
-          Входящие ({incomingRequests.length})
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <div className={`text-2xl font-bold ${activeTab === 'incoming' ? 'text-green-600' : 'text-gray-900'}`}>
+                {incomingRequests.length}
+              </div>
+              <div className={`text-sm ${activeTab === 'incoming' ? 'text-green-600' : 'text-gray-600'}`}>
+                Входящие
+              </div>
+            </div>
+            <div className={`p-2 rounded-full ${activeTab === 'incoming' ? 'bg-green-100' : 'bg-gray-100'} relative`}>
+              <svg className={`w-6 h-6 ${activeTab === 'incoming' ? 'text-green-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              {incomingRequests.length > 0 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {incomingRequests.length}
+                </div>
+              )}
+            </div>
+          </div>
         </button>
+
         <button
           onClick={() => setActiveTab('outgoing')}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
             activeTab === 'outgoing'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'border-yellow-500 bg-yellow-50 shadow-md'
+              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
           }`}
         >
-          Исходящие ({outgoingRequests.length})
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <div className={`text-2xl font-bold ${activeTab === 'outgoing' ? 'text-yellow-600' : 'text-gray-900'}`}>
+                {outgoingRequests.length}
+              </div>
+              <div className={`text-sm ${activeTab === 'outgoing' ? 'text-yellow-600' : 'text-gray-600'}`}>
+                Исходящие
+              </div>
+            </div>
+            <div className={`p-2 rounded-full ${activeTab === 'outgoing' ? 'bg-yellow-100' : 'bg-gray-100'}`}>
+              <svg className={`w-6 h-6 ${activeTab === 'outgoing' ? 'text-yellow-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </div>
+          </div>
         </button>
       </div>
 
@@ -311,13 +360,13 @@ const FriendsManager = ({ onStartChat }) => {
                     <>
                       <button
                         onClick={() => handleStartChat(friend)}
-                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                        className="bg-blue-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm sm:text-base whitespace-nowrap"
                       >
                         Написать
                       </button>
                       <button
                         onClick={() => handleRemoveFriend(friend.id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+                        className="bg-red-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-600 transition-colors text-sm sm:text-base whitespace-nowrap"
                       >
                         Удалить
                       </button>
@@ -341,13 +390,13 @@ const FriendsManager = ({ onStartChat }) => {
                     <>
                       <button
                         onClick={() => handleAcceptFriendRequest(request)}
-                        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                        className="bg-green-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-green-600 transition-colors text-sm sm:text-base whitespace-nowrap"
                       >
                         Принять
                       </button>
                       <button
                         onClick={() => handleRejectFriendRequest(request)}
-                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+                        className="bg-red-500 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-600 transition-colors text-sm sm:text-base whitespace-nowrap"
                       >
                         Отклонить
                       </button>
@@ -368,7 +417,7 @@ const FriendsManager = ({ onStartChat }) => {
               ) : (
                 outgoingRequests.map(request =>
                   renderUserCard(request, (
-                    <div className="text-yellow-600 font-medium bg-yellow-50 px-3 py-2 rounded">
+                    <div className="text-yellow-600 font-medium bg-yellow-50 px-3 py-2 rounded text-sm sm:text-base whitespace-nowrap">
                       Ожидает ответа
                     </div>
                   ))
